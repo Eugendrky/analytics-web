@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Аналитика проектов</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Аналитика</div>
+    <div class="controls" id="controls" hidden>
+      <select id="project" aria-label="Проект"></select>
+      <select id="preset" aria-label="Период">
+        <option value="7">7 дней</option>
+        <option value="30" selected>30 дней</option>
+        <option value="90">90 дней</option>
+        <option value="this_month">Этот месяц</option>
+        <option value="last_month">Прошлый месяц</option>
+        <option value="custom">Свой период</option>
+      </select>
+      <span class="custom" id="custom" hidden>
+        <input type="date" id="from" aria-label="С">
+        <input type="date" id="to" aria-label="По">
+      </span>
+      <span class="user" id="user"></span>
+      <button class="link" id="logout" type="button">Выйти</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="login" id="login" hidden>
+      <h1>Отчёты по вашим проектам</h1>
+      <p>Войдите через Telegram тем же аккаунтом, которым пользуетесь в боте. Вы увидите только свои проекты.</p>
+      <div id="login-widget"></div>
+      <p class="error" id="login-error" hidden></p>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div class="period" id="period"></div>
+      <div class="state" id="state" hidden></div>
+      <div id="report" hidden>
+        <article class="verdict">
+          <h2>Итог</h2>
+          <p id="verdict"></p>
+        </article>
+        <div class="kpis" id="kpis"></div>
+        <div class="grid">
+          <article class="panel" id="sources-panel"><h3 id="sources-title">Источники</h3><div id="sources"></div></article>
+          <article class="panel" id="secondary-panel" hidden><h3 id="secondary-title"></h3><div id="secondary"></div></article>
+          <article class="panel" id="stages-panel" hidden><h3>Этапы</h3><div id="stages"></div></article>
+          <article class="panel" id="trend-panel" hidden><h3 id="trend-title"></h3><div id="trend" class="trend"></div></article>
+        </div>
+        <div class="grid">
+          <article class="panel problems" id="problems-panel" hidden><h3>Проблемы</h3><ul id="problems"></ul></article>
+          <article class="panel recommendations" id="recs-panel" hidden><h3>Рекомендации</h3><ul id="recs"></ul></article>
+        </div>
+        <details class="fulltext">
+          <summary>Полный текст отчёта, как в боте</summary>
+          <pre id="text"></pre>
+        </details>
+        <p class="note" id="note"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
