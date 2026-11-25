@@ -169,11 +169,33 @@
     }
   }
 
+  function renderPlanFact(items) {
+    const panel = $('planfact-panel')
+    panel.hidden = !items || !items.length
+    const container = $('planfact')
+    container.replaceChildren()
+    for (const item of items || []) {
+      const row = el('div', `pf pf-${item.status}`)
+      const head = el('div', 'pf-head')
+      head.appendChild(el('span', 'pf-label', item.label))
+      head.appendChild(el('span', 'pf-pct', `${number.format(item.completionPct)}%`))
+      row.appendChild(head)
+      const track = el('div', 'pf-track')
+      const fill = el('span', 'pf-fill')
+      fill.style.width = `${Math.min(100, Math.max(2, item.completionPct))}%`
+      track.appendChild(fill)
+      row.appendChild(track)
+      row.appendChild(el('div', 'pf-text', item.text))
+      container.appendChild(row)
+    }
+  }
+
   function renderReport(report) {
     const visual = report.visual || {}
     $('period').textContent = `${report.project.name} · ${report.period.label}`
     $('verdict').textContent = visual.verdict || (report.text ? report.text.split('\n').slice(2, 4).join(' ') : '')
     renderKpis(report)
+    renderPlanFact(report.planFact)
 
     $('sources-title').textContent = visual.sourceTitle || 'Источники'
     $('sources-panel').hidden = !(visual.sources && visual.sources.length)
