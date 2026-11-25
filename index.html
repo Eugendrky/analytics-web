@@ -23,6 +23,7 @@
         <input type="date" id="from" aria-label="С">
         <input type="date" id="to" aria-label="По">
       </span>
+      <button class="btn" id="share-open" type="button">Поделиться</button>
       <span class="user" id="user"></span>
       <button class="link" id="logout" type="button">Выйти</button>
     </div>
@@ -37,6 +38,7 @@
     </section>
 
     <section id="dashboard" hidden>
+      <div class="shared-banner" id="shared-banner" hidden></div>
       <div class="period" id="period"></div>
       <div class="state" id="state" hidden></div>
       <div id="report" hidden>
@@ -67,6 +69,36 @@
       </div>
     </section>
   </main>
+
+  <div class="modal" id="share-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <button class="modal-close" id="share-close" type="button" aria-label="Закрыть">×</button>
+      <h2 id="share-title">Поделиться отчётом</h2>
+      <p class="muted">Кто откроет ссылку, увидит отчёт этого проекта только для чтения. Входить через Telegram не нужно.</p>
+      <div class="share-days">
+        <span>Ссылка на</span>
+        <button class="btn" type="button" data-days="1">1 день</button>
+        <button class="btn" type="button" data-days="7">7 дней</button>
+        <button class="btn" type="button" data-days="30">30 дней</button>
+      </div>
+      <div class="copy-row" id="share-result" hidden>
+        <input type="text" id="share-url" readonly aria-label="Ссылка">
+        <button class="btn primary" type="button" data-copy="share-url">Скопировать</button>
+      </div>
+      <h3>Активные ссылки</h3>
+      <ul class="share-list" id="share-list"></ul>
+
+      <hr>
+      <h3>Моя постоянная ссылка</h3>
+      <p class="muted">Открывает все ваши проекты без входа через Telegram — для вас самих, не пересылайте её. Новая ссылка отменяет предыдущую.</p>
+      <button class="btn" type="button" id="personal-issue">Выпустить постоянную ссылку</button>
+      <div class="copy-row" id="personal-result" hidden>
+        <input type="text" id="personal-url" readonly aria-label="Постоянная ссылка">
+        <button class="btn primary" type="button" data-copy="personal-url">Скопировать</button>
+      </div>
+      <p class="error" id="share-error" hidden></p>
+    </div>
+  </div>
 
   <script src="config.js"></script>
   <script src="app.js"></script>

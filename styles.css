@@ -139,3 +139,41 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
   .kpi-value { font-size: 22px; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
 }
+
+.btn {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.small { padding: 3px 10px; font-size: 13px; }
+.muted { color: var(--muted); font-size: 14px; }
+
+.shared-banner {
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.shared-banner[hidden] { display: none; }
+
+.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px; z-index: 10; overflow-y: auto; }
+.modal[hidden] { display: none; }
+.modal-box { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px; width: 100%; max-width: 520px; }
+.modal-box h2 { margin: 0 0 6px; font-size: 18px; }
+.modal-box h3 { margin: 18px 0 8px; font-size: 15px; }
+.modal-box hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0 0; }
+.modal-close { position: absolute; top: 10px; right: 12px; font-size: 22px; line-height: 1; background: none; border: 0; color: var(--muted); cursor: pointer; }
+.share-days { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.copy-row { display: flex; gap: 8px; margin: 10px 0; }
+.copy-row[hidden] { display: none; }
+.copy-row input { flex: 1; min-width: 0; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); }
+.share-list { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.share-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.share-list li.empty { color: var(--muted); border: 0; }

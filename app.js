@@ -13,6 +13,9 @@
 
   let token = storage.get(TOKEN_KEY)
   let requestSeq = 0
+  // Set when the page was opened by a share link: read-only view of one project, no login.
+  let shareToken = null
+  const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
   function el(tag, className, text) {
     const node = document.createElement(tag)
@@ -31,10 +34,10 @@
 
   async function api(path, options = {}) {
     const headers = { 'Content-Type': 'application/json' }
-    if (token) headers.Authorization = `Bearer ${token}`
+    if (token && !shareToken) headers.Authorization = `Bearer ${token}`
     const response = await fetch(`${API}/api${path}`, { ...options, headers })
     const body = await response.json().catch(() => ({}))
-    if (response.status === 401 && path !== '/auth/telegram') {
+    if (response.status === 401 && !path.startsWith('/auth/') && !shareToken) {
       logout()
       throw new Error('session_expired')
     }
@@ -242,13 +245,14 @@
 
   async function loadReport() {
     const projectId = $('project').value
-    if (!projectId) return
-    storage.set(PROJECT_KEY, projectId)
+    if (!projectId && !shareToken) return
+    if (!shareToken) storage.set(PROJECT_KEY, projectId)
     const range = currentRange()
     const seq = ++requestSeq
     setState('Загружаю отчёт…')
     try {
-      const report = await api(`/projects/${encodeURIComponent(projectId)}/report?from=${range.from}&to=${range.to}`)
+      const base = shareToken ? `/share/${encodeURIComponent(shareToken)}` : `/projects/${encodeURIComponent(projectId)}`
+      const report = await api(`${base}/report?from=${range.from}&to=${range.to}`)
       if (seq !== requestSeq) return
       if (!report.entriesCount) {
         $('period').textContent = `${report.project.name} · ${report.period.label}`
@@ -259,7 +263,128 @@
       renderReport(report)
     } catch (error) {
       if (seq !== requestSeq || error.message === 'session_expired') return
+      if (error.message === 'link_not_found') return setState('Ссылка больше не действует: срок истёк или её отозвали. Попросите новую у того, кто ею поделился.')
       setState(error.message === 'invalid_period' ? 'Проверьте даты периода.' : 'Не удалось загрузить отчёт. Попробуйте обновить страницу.')
+    }
+  }
+
+  // ---------- links ----------
+
+  function shareError(message) {
+    $('share-error').hidden = !message
+    $('share-error').textContent = message || ''
+  }
+
+  async function copyField(id, button) {
+    const input = $(id)
+    input.select()
+    try {
+      await navigator.clipboard.writeText(input.value)
+    } catch (_) {
+      document.execCommand('copy')
+    }
+    const label = button.textContent
+    button.textContent = 'Скопировано'
+    setTimeout(() => { button.textContent = label }, 1500)
+  }
+
+  async function refreshShareList() {
+    const list = $('share-list')
+    const projectId = $('project').value
+    const { links } = await api(`/projects/${encodeURIComponent(projectId)}/shares`)
+    if (!links.length) {
+      list.replaceChildren(el('li', 'empty', 'Нет активных ссылок.'))
+      return
+    }
+    list.replaceChildren(...links.map((link) => {
+      const item = el('li')
+      const used = link.lastUsedAt ? ` · открывали ${dateFormat.format(new Date(link.lastUsedAt))}` : ''
+      item.appendChild(el('span', null, `до ${dateFormat.format(new Date(link.expiresAt))}${used}`))
+      const revoke = el('button', 'btn small', 'Отозвать')
+      revoke.type = 'button'
+      revoke.addEventListener('click', async () => {
+        revoke.disabled = true
+        try {
+          await api(`/shares/${encodeURIComponent(link.id)}`, { method: 'DELETE' })
+          await refreshShareList()
+        } catch (_) {
+          shareError('Не удалось отозвать ссылку. Попробуйте ещё раз.')
+          revoke.disabled = false
+        }
+      })
+      item.appendChild(revoke)
+      return item
+    }))
+  }
+
+  async function openShareDialog() {
+    const select = $('project')
+    if (!select.value) return
+    $('share-title').textContent = `Поделиться отчётом «${select.options[select.selectedIndex].text}»`
+    $('share-result').hidden = true
+    $('personal-result').hidden = true
+    shareError(null)
+    $('share-modal').hidden = false
+    try {
+      await refreshShareList()
+    } catch (_) {
+      shareError('Не удалось загрузить список ссылок.')
+    }
+  }
+
+  async function createShareLink(days) {
+    shareError(null)
+    try {
+      const { url } = await api(`/projects/${encodeURIComponent($('project').value)}/shares`, { method: 'POST', body: JSON.stringify({ days }) })
+      $('share-url').value = url
+      $('share-result').hidden = false
+      await refreshShareList()
+    } catch (_) {
+      shareError('Не удалось создать ссылку. Попробуйте ещё раз.')
+    }
+  }
+
+  async function issuePersonalLink() {
+    shareError(null)
+    try {
+      const { url } = await api('/me/personal-link', { method: 'POST' })
+      $('personal-url').value = url
+      $('personal-result').hidden = false
+    } catch (_) {
+      shareError('Не удалось выпустить ссылку. Попробуйте ещё раз.')
+    }
+  }
+
+  async function loginWithLink(linkToken) {
+    try {
+      const result = await api('/auth/link', { method: 'POST', body: JSON.stringify({ token: linkToken }) })
+      token = result.token
+      storage.set(TOKEN_KEY, token)
+      // Keep the address clean so the permanent link is not left in the tab or shared by accident.
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      start()
+    } catch (_) {
+      showLogin('Эта постоянная ссылка больше не действует. Выпустите новую в боте командой /web или войдите через Telegram.')
+    }
+  }
+
+  async function startShared(linkToken) {
+    shareToken = linkToken
+    $('login').hidden = true
+    $('dashboard').hidden = false
+    $('controls').hidden = false
+    for (const id of ['project', 'share-open', 'user', 'logout']) $(id).hidden = true
+    setState('Открываю отчёт…')
+    try {
+      const meta = await api(`/share/${encodeURIComponent(shareToken)}`)
+      document.title = `${meta.project.name} — отчёт`
+      $('shared-banner').hidden = false
+      $('shared-banner').textContent = `Отчёт «${meta.project.name}» открыт по ссылке, только для просмотра. Ссылка действует до ${dateFormat.format(new Date(meta.expiresAt))}.`
+      loadReport()
+    } catch (error) {
+      setState(error.message === 'link_not_found'
+        ? 'Ссылка больше не действует: срок истёк или её отозвали. Попросите новую у того, кто ею поделился.'
+        : 'Сервер недоступен. Если он спал, подождите несколько секунд и обновите страницу.')
     }
   }
 
@@ -304,6 +429,22 @@
   $('to').addEventListener('change', loadReport)
   $('logout').addEventListener('click', logout)
 
-  if (token) start()
+  $('share-open').addEventListener('click', openShareDialog)
+  $('share-close').addEventListener('click', () => { $('share-modal').hidden = true })
+  $('share-modal').addEventListener('click', (event) => { if (event.target === $('share-modal')) $('share-modal').hidden = true })
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') $('share-modal').hidden = true })
+  for (const button of document.querySelectorAll('[data-days]')) {
+    button.addEventListener('click', () => createShareLink(Number(button.dataset.days)))
+  }
+  for (const button of document.querySelectorAll('[data-copy]')) {
+    button.addEventListener('click', () => copyField(button.dataset.copy, button))
+  }
+  $('personal-issue').addEventListener('click', issuePersonalLink)
+
+  // Tokens come in the URL fragment: #s=… share link, #k=… personal link.
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  if (params.get('s')) startShared(params.get('s'))
+  else if (params.get('k')) loginWithLink(params.get('k'))
+  else if (token) start()
   else showLogin()
 })()
