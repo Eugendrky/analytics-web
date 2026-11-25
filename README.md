@@ -7,3 +7,4 @@
 - Исходники сайта живут в приватном репозитории бота в папке `web/`; при изменениях скопируйте файлы сюда.
 
 Публикация: Settings → Pages → Deploy from a branch → `main` / `(root)`.
+Сайт: https://eugendrky.github.io/analytics-web/
