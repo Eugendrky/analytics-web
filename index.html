@@ -11,6 +11,7 @@
     <div class="brand">Аналитика</div>
     <div class="controls" id="controls" hidden>
       <select id="project" aria-label="Проект"></select>
+      <select id="direction" aria-label="Направление" hidden><option value="">Все направления</option></select>
       <select id="preset" aria-label="Период">
         <option value="7">7 дней</option>
         <option value="30" selected>30 дней</option>
@@ -57,6 +58,13 @@
           <article class="panel" id="stages-panel" hidden><h3>Этапы</h3><div id="stages"></div></article>
           <article class="panel" id="trend-panel" hidden><h3 id="trend-title"></h3><div id="trend" class="trend"></div></article>
         </div>
+        <article class="panel" id="source-results-panel" hidden>
+          <h3 id="source-results-title">Результат по источникам</h3>
+          <div class="table-scroll"><table class="results-table">
+            <thead><tr><th>Источник</th><th>Заявки</th><th id="outcome-heading">Оплаты</th><th>Доля</th><th id="amount-heading">Сумма оплат</th></tr></thead>
+            <tbody id="source-results"></tbody>
+          </table></div>
+        </article>
         <div class="grid">
           <article class="panel problems" id="problems-panel" hidden><h3>Проблемы</h3><ul id="problems"></ul></article>
           <article class="panel recommendations" id="recs-panel" hidden><h3>Рекомендации</h3><ul id="recs"></ul></article>
@@ -104,3 +112,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+

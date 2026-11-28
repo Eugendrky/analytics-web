@@ -32,6 +32,21 @@
     return unit ? `${text} ${unit}` : text
   }
 
+  function sourceLabel(raw) {
+    const names = {
+      osnovateli_media_instagram: 'Инстаграм · Основатели',
+      kuhnya_osnovateley_tg: 'TG «Кухня Основателей»',
+      denis_kutergin: 'Денис Кутергин',
+      eduard_gurinovich: 'Эдуард Гуринович',
+      osnovateli_media_vkgroup: 'ВК · Основатели',
+      osnovateli_tg: 'TG «Основатели»',
+      osnovateli_tg_stories: 'TG «Основатели», истории',
+      kuhnya_osnovateley_tg_stories: 'TG «Кухня Основателей», истории',
+      osnovateley_onlinebot_tg: 'TG · бот «Основатели онлайн»',
+    }
+    return names[raw] || String(raw || '').replaceAll('_', ' ')
+  }
+
   async function api(path, options = {}) {
     const headers = { 'Content-Type': 'application/json' }
     if (token && !shareToken) headers.Authorization = `Bearer ${token}`
@@ -131,7 +146,9 @@
     const max = Math.max(...items.map((item) => Number(item.value) || 0), 1)
     for (const item of items) {
       const row = el('div', 'bar')
-      row.appendChild(el('span', 'bar-label', item.label))
+      const label = el('span', 'bar-label', sourceLabel(item.label))
+      label.title = item.label
+      row.appendChild(label)
       const track = el('span', 'bar-track')
       const fill = el('span', 'bar-fill')
       fill.style.width = `${Math.max(2, (Number(item.value) / max) * 100)}%`
@@ -139,6 +156,18 @@
       row.appendChild(track)
       row.appendChild(el('span', 'bar-value', formatValue(item.value, unit)))
       container.appendChild(row)
+      if (item.details?.length) {
+        const details = el('details', 'bar-details')
+        details.appendChild(el('summary', null, `Показать остальные (${item.details.length})`))
+        for (const detail of item.details) {
+          const line = el('div', 'bar-detail')
+          const name = el('span', null, sourceLabel(detail.label))
+          name.title = detail.label
+          line.append(name, el('span', null, formatValue(detail.value, unit)))
+          details.appendChild(line)
+        }
+        container.appendChild(details)
+      }
     }
   }
 
@@ -160,7 +189,9 @@
       const box = el('div', 'kpi')
       box.appendChild(el('div', 'kpi-label', card.label))
       box.appendChild(el('div', 'kpi-value', formatValue(card.value, card.unit)))
-      if (card.deltaPct !== null && card.deltaPct !== undefined) {
+      if (card.previous > 0 && card.previous < 10 && card.deltaPct !== null && card.deltaPct !== undefined) {
+        box.appendChild(el('div', 'kpi-delta', `было ${formatValue(card.previous, card.unit)} · низкая база для сравнения`))
+      } else if (card.deltaPct !== null && card.deltaPct !== undefined) {
         const good = card.deltaPct === 0 ? null : (card.deltaPct > 0) !== Boolean(card.lowerIsBetter)
         const delta = el('div', `kpi-delta ${good === null ? '' : good ? 'up' : 'down'}`)
         delta.textContent = `${card.deltaPct > 0 ? '▲ +' : card.deltaPct < 0 ? '▼ ' : ''}${number.format(card.deltaPct)}% к прошлому периоду`
@@ -169,6 +200,31 @@
         box.appendChild(el('div', 'kpi-delta', `было ${formatValue(card.previous, card.unit)}`))
       }
       container.appendChild(box)
+    }
+  }
+
+  function renderSourceResults(visual) {
+    const items = visual.sourcePerformance || []
+    $('source-results-panel').hidden = !items.length
+    if (!items.length) return
+    const residents = visual.cards?.some(card => card.label === 'Резиденты')
+    $('outcome-heading').textContent = residents ? 'Резиденты' : 'Оплаты'
+    const showAmount = items.some(item => item.amount !== null && item.amount !== undefined)
+    $('amount-heading').hidden = !showAmount
+    const body = $('source-results')
+    body.replaceChildren()
+    for (const item of items) {
+      const row = el('tr')
+      const name = el('th', null, sourceLabel(item.label))
+      name.title = item.label
+      row.appendChild(name)
+      row.appendChild(el('td', null, formatValue(item.leads)))
+      row.appendChild(el('td', null, item.outcomes == null ? '—' : formatValue(item.outcomes)))
+      row.appendChild(el('td', null, item.outcomes == null || !item.leads ? '—' : formatValue(item.outcomes / item.leads * 100, '%')))
+      const amount = el('td', null, item.amount == null ? '—' : formatValue(item.amount, '₽'))
+      amount.hidden = !showAmount
+      row.appendChild(amount)
+      body.appendChild(row)
     }
   }
 
@@ -195,9 +251,10 @@
 
   function renderReport(report) {
     const visual = report.visual || {}
-    $('period').textContent = `${report.project.name} · ${report.period.label}`
+    $('period').textContent = `${report.project.name}${report.direction ? ' · ' + report.direction.name : ''} · ${report.period.label}`
     $('verdict').textContent = visual.verdict || (report.text ? report.text.split('\n').slice(2, 4).join(' ') : '')
     renderKpis(report)
+    renderSourceResults(visual)
     renderPlanFact(report.planFact)
 
     $('sources-title').textContent = visual.sourceTitle || 'Источники'
@@ -215,25 +272,29 @@
 
     $('trend-panel').hidden = !(visual.weeks && visual.weeks.length)
     if (visual.weeks && visual.weeks.length) {
-      $('trend-title').textContent = visual.trendTitle || 'Динамика'
+      $('trend-title').textContent = (visual.trendTitle || 'Динамика') + (visual.weeks.some(w => w.perDay != null) ? ' · высота: заявок в день' : '')
       const trend = $('trend')
       trend.replaceChildren()
-      const max = Math.max(...visual.weeks.map((w) => w.value), 1)
+      const max = Math.max(...visual.weeks.map((w) => w.perDay ?? w.value), 1)
       for (const week of visual.weeks) {
         const col = el('div', 'trend-col')
-        col.title = `${week.label}: ${week.value}`
+        const start = week.start || week.label
+        const span = week.end ? `${start} — ${week.end}` : String(week.label)
+        col.title = `${span}: ${week.value}${week.days ? ` · ${number.format(week.perDay)} в день` : ''}`
         const fill = el('span', 'trend-fill')
-        fill.style.height = `${Math.max(3, (week.value / max) * 100)}%`
+        fill.style.height = `${Math.max(3, ((week.perDay ?? week.value) / max) * 100)}%`
         col.appendChild(el('span', 'trend-value', number.format(week.value)))
         col.appendChild(fill)
-        col.appendChild(el('span', 'trend-label', String(week.label).slice(5)))
+        const label = week.end ? `${start.slice(5)}–${week.end.slice(5)}` : String(week.label).slice(5)
+        col.appendChild(el('span', 'trend-label', label))
+        if (week.partial) col.appendChild(el('span', 'trend-partial', 'неполная'))
         trend.appendChild(col)
       }
     }
 
     renderList('problems-panel', 'problems', visual.problems)
     renderList('recs-panel', 'recs', visual.recommendations)
-    $('text').textContent = report.text || ''
+    $('text').textContent = (report.text || '').replace(/^(\s+)не указано: /gmu, '$1Статус ЦА не указан: ')
     $('note').textContent = visual.note || ''
   }
 
@@ -252,11 +313,24 @@
     setState('Загружаю отчёт…')
     try {
       const base = shareToken ? `/share/${encodeURIComponent(shareToken)}` : `/projects/${encodeURIComponent(projectId)}`
-      const report = await api(`${base}/report?from=${range.from}&to=${range.to}`)
+      const directionId = $('direction').value
+      const report = await api(`${base}/report?from=${range.from}&to=${range.to}${directionId ? `&directionId=${encodeURIComponent(directionId)}` : ''}`)
       if (seq !== requestSeq) return
       if (!report.entriesCount) {
-        $('period').textContent = `${report.project.name} · ${report.period.label}`
+        $('period').textContent = `${report.project.name}${report.direction ? ' · ' + report.direction.name : ''} · ${report.period.label}`
         setState('За этот период данных нет. Выберите другой период или загрузите данные через бота.')
+        if (report.lastAvailable) {
+          const button = el('button', 'btn', `Показать последние данные: ${report.lastAvailable.from} — ${report.lastAvailable.to}`)
+          button.type = 'button'
+          button.addEventListener('click', () => {
+            $('preset').value = 'custom'
+            $('custom').hidden = false
+            $('from').value = report.lastAvailable.from
+            $('to').value = report.lastAvailable.to
+            loadReport()
+          })
+          $('state').appendChild(button)
+        }
         return
       }
       setState(null)
@@ -265,6 +339,29 @@
       if (seq !== requestSeq || error.message === 'session_expired') return
       if (error.message === 'link_not_found') return setState('Ссылка больше не действует: срок истёк или её отозвали. Попросите новую у того, кто ею поделился.')
       setState(error.message === 'invalid_period' ? 'Проверьте даты периода.' : 'Не удалось загрузить отчёт. Попробуйте обновить страницу.')
+    }
+  }
+
+  async function loadDirections() {
+    const projectId = $('project').value
+    const select = $('direction')
+    const previous = select.value
+    const base = shareToken ? `/share/${encodeURIComponent(shareToken)}` : `/projects/${encodeURIComponent(projectId)}`
+    try {
+      const { directions } = await api(`${base}/directions`)
+      if (!shareToken && $('project').value !== projectId) return
+      const all = el('option', null, 'Все направления')
+      all.value = ''
+      select.replaceChildren(all, ...directions.map(item => {
+        const option = el('option', null, item.name)
+        option.value = item.id
+        return option
+      }))
+      if (directions.some(item => item.id === previous)) select.value = previous
+      select.hidden = !directions.length
+    } catch (_) {
+      select.hidden = true
+      select.value = ''
     }
   }
 
@@ -380,6 +477,7 @@
       document.title = `${meta.project.name} — отчёт`
       $('shared-banner').hidden = false
       $('shared-banner').textContent = `Отчёт «${meta.project.name}» открыт по ссылке, только для просмотра. Ссылка действует до ${dateFormat.format(new Date(meta.expiresAt))}.`
+      await loadDirections()
       loadReport()
     } catch (error) {
       setState(error.message === 'link_not_found'
@@ -408,13 +506,15 @@
       }
       const saved = storage.get(PROJECT_KEY)
       if (saved && projects.some((p) => p.id === saved)) select.value = saved
+      await loadDirections()
       loadReport()
     } catch (error) {
       if (error.message !== 'session_expired') setState('Сервер недоступен. Попробуйте обновить страницу через несколько секунд.')
     }
   }
 
-  $('project').addEventListener('change', loadReport)
+  $('project').addEventListener('change', async () => { $('direction').value = ''; await loadDirections(); loadReport() })
+  $('direction').addEventListener('change', loadReport)
   $('preset').addEventListener('change', () => {
     const custom = $('preset').value === 'custom'
     $('custom').hidden = !custom
@@ -448,3 +548,4 @@
   else if (token) start()
   else showLogin()
 })()
+

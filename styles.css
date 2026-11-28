@@ -103,12 +103,25 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 .bar-track { height: 10px; background: var(--accent-soft); border-radius: 5px; overflow: hidden; }
 .bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
 .bar-value { font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar-details { margin: -2px 0 10px; color: var(--muted); font-size: 13px; }
+.bar-details summary { cursor: pointer; color: var(--accent); }
+.bar-detail { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.bar-detail span:first-child { overflow-wrap: anywhere; }
+
+#source-results-panel { margin-bottom: 16px; }
+.table-scroll { overflow-x: auto; }
+.results-table { width: 100%; border-collapse: collapse; min-width: 500px; font-variant-numeric: tabular-nums; }
+.results-table th, .results-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+.results-table th:first-child { text-align: left; }
+.results-table tbody th { font-weight: 400; overflow-wrap: anywhere; }
+.results-table [hidden] { display: none; }
 
 .trend { display: flex; align-items: flex-end; gap: 6px; height: 160px; }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
 .trend-fill { width: 100%; max-width: 36px; background: var(--accent); border-radius: 4px 4px 0 0; }
 .trend-value { font-size: 12px; color: var(--muted); }
 .trend-label { font-size: 11px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+.trend-partial { font-size: 10px; color: var(--muted); }
 
 .planfact { margin-bottom: 16px; }
 .pf { margin: 14px 0; }
@@ -177,3 +190,4 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 .share-list { list-style: none; margin: 0; padding: 0; font-size: 14px; }
 .share-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .share-list li.empty { color: var(--muted); border: 0; }
+
